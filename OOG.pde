@@ -1,34 +1,49 @@
-ArrayList<Circle> circles;
-Button playButton, settingsButton, creditsButton;
 
-String currentScreen = "menu"; // "menu", "play", "settings", "credits"
+// the list for circles and sliders
+ArrayList<Circle> circles;
+ArrayList<Slider> sliders;
+// all the buttons used in the game
+Button playButton, settingsButton, creditsButton, playAgainButton, mainMenuButton;
+
+
+String currentScreen = "menu"; 
 int score = 0;
-int spawnInterval = 1000; // Time interval (in ms) to spawn new circles
+int spawnInterval = 1000; // milliseconds to spawn new objects
 int lastSpawnTime = 0;
 
 void setup() {
   size(600, 600);
 
-  // Initialize menu buttons
+  // creating the menu buttons
   playButton = new Button(width / 2 - 50, 100, 100, 40, "Play");
   settingsButton = new Button(width / 2 - 50, 160, 100, 40, "Settings");
   creditsButton = new Button(width / 2 - 50, 220, 100, 40, "Credits");
+  playAgainButton = new Button(width / 2 - 50, 200, 100, 40, "Play Again");
+  mainMenuButton = new Button(width / 2 - 50, 260, 100, 40, "Main Menu");
 
-  // Initialize circle list
+  // empty object lists for da circles and sliders
   circles = new ArrayList<Circle>();
+  sliders = new ArrayList<Slider>();
 }
 
 void draw() {
-  background(51);
+  background(65);
 
   if (currentScreen.equals("menu")) { // Menu Screen
     playButton.display();
     settingsButton.display();
     creditsButton.display();
-  } else if (currentScreen.equals("play")) { // Play Screen
-    // Spawn circles randomly at intervals
+    fill(255);
+    text("Circle Clicking Game", width/2, height/2);
+    // Play Screen
+  } else if (currentScreen.equals("play")) { 
+    // Spawn circles or sliders randomly
     if (millis() - lastSpawnTime > spawnInterval) {
-      spawnCircle();
+      if (random(1) < 0.5) {
+        spawnCircle();
+      } else {
+        spawnSlider();
+      }
       lastSpawnTime = millis();
     }
 
@@ -37,38 +52,54 @@ void draw() {
       Circle c = circles.get(i);
       c.update();
       c.display();
+      if (c.isMissed()) {
+        // Go to the Game Over screen
+        currentScreen = "gameover"; 
+      }
+    }
+
+    // Update and display sliders
+    for (int i = sliders.size() - 1; i >= 0; i--) {
+      Slider s = sliders.get(i);
+      s.display();
+      if (s.isMissed()) {
+        // Go to Game Over screen
+        currentScreen = "gameover"; 
+      }
     }
 
     // Display score
     fill(255);
     textAlign(LEFT, TOP);
-    textSize(16);
+    textSize(30);
     text("Score: " + score, 10, 10);
 
-    // Game Over Condition
-    if (circles.isEmpty() && millis() - lastSpawnTime > spawnInterval * 2) {
-      fill(255, 0, 0);
-      textAlign(CENTER, CENTER);
-      textSize(32);
-      text("Game Over", width / 2, height / 2);
-      textSize(16);
-      text("Press 'R' to Restart", width / 2, height / 2 + 40);
-    }
-  } else if (currentScreen.equals("settings")) { // Settings Screen
+// Game Over Screen display
+  } else if (currentScreen.equals("gameover")) { 
     fill(255);
     textAlign(CENTER, CENTER);
     textSize(32);
-    text("Settings Screen", width / 2, height / 2);
-  } else if (currentScreen.equals("credits")) { // Credits Screen
+    text("Game Over", 300, 100);
+    playAgainButton.display();
+    mainMenuButton.display();
+    // Settings Screen display
+  } else if (currentScreen.equals("settings")) { 
     fill(255);
     textAlign(CENTER, CENTER);
     textSize(32);
-    text("Credits Screen", width / 2, height / 2);
+    text("There are no settings dum dum", width / 2, height / 2);
+    // Credits Screen
+  } else if (currentScreen.equals("credits")) { 
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(32);
+    text("Made by Christopher Bader... No one else", width / 2, height / 2);
   }
 }
 
 void mousePressed() {
-  if (currentScreen.equals("menu")) { // Menu Screen
+  // Mouse pressed functions for the menu screen only
+  if (currentScreen.equals("menu")) { 
     if (playButton.isHovered()) {
       currentScreen = "play";
       initializeGame();
@@ -77,35 +108,89 @@ void mousePressed() {
     } else if (creditsButton.isHovered()) {
       currentScreen = "credits";
     }
+    // Mouse pressed functions for the game
   } else if (currentScreen.equals("play")) { // Play Screen
     for (int i = circles.size() - 1; i >= 0; i--) {
       Circle c = circles.get(i);
       if (c.isClicked(mouseX, mouseY)) {
         circles.remove(i);
-        score += 100; // Increase score when circle is clicked
+        // Increase score when the circle is clicked
+        score += 100; 
         break;
       }
+    }
+
+    for (int i = sliders.size() - 1; i >= 0; i--) {
+      Slider s = sliders.get(i);
+      if (s.isStartClicked(mouseX, mouseY)) {
+        // Start tracking the slider progress
+        s.activate(); 
+      }
+    }
+    // Game Over Screen if lost
+  } else if (currentScreen.equals("gameover")) { 
+    if (playAgainButton.isHovered()) {
+      currentScreen = "play";
+      initializeGame();
+    } else if (mainMenuButton.isHovered()) {
+      currentScreen = "menu";
     }
   }
 }
 
-void keyPressed() {
-  if (key == 'r' || key == 'R') {
-    initializeGame(); // Restart game
-  } else if (key == 'm' || key == 'M') {
-    currentScreen = "menu"; // Return to menu
+void mouseDragged() {
+  // Check to see if any sliders are active
+  for (Slider s : sliders) {
+    if (s.isActive()) {
+      s.track(mouseX, mouseY);
+    }
   }
 }
 
+void mouseReleased() {
+  // Finish the active sliders when mouse drags fully
+  for (int i = sliders.size() - 1; i >= 0; i--) {
+    Slider s = sliders.get(i);
+    if (s.isActive()) {
+      // If the slider is completed...
+      if (s.isCompleted()) {
+        sliders.remove(i);
+        // Increase score when slider is finished
+        score += 150; 
+      } else {
+        // Stop tracking if not completed
+        s.deactivate(); 
+      }
+    }
+  }
+}
+//Main code to initialize the game
 void initializeGame() {
+  // Reset the score, clear all circles and sliders.
   score = 0;
   circles.clear();
-  lastSpawnTime = millis(); // Reset spawn timer
+  sliders.clear();
+  //This is to track the spawn time of every circle and slider
+  lastSpawnTime = millis(); 
 }
-
+//this function will randomly spawn each circle
 void spawnCircle() {
-  // Spawn a new circle at a random position
   float x = random(100, width - 100);
   float y = random(100, height - 100);
   circles.add(new Circle(new PVector(x, y)));
+}
+//This function randomly spawns in the sliders
+void spawnSlider() {
+  float x = random(100, width - 100);
+  float y = random(100, height - 100);
+
+  // Randomly decide if the slider is vertical or horizontal
+  boolean isVertical = random(1) < 0.5;
+ // Vertical Slider
+  if (isVertical) {
+    sliders.add(new Slider(new PVector(x, y), 200, true));
+  } else {
+    // Horizontal Slider
+    sliders.add(new Slider(new PVector(x, y), 200, false)); 
+  }
 }

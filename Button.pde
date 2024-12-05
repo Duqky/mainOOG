@@ -9,7 +9,8 @@ class Button {
     h = ph;
     label = lbl;
   }
-
+//displaying the buttons along with changing the fill if the button is hovered
+//to show the player that the button is selected
   void display() {
     if (isHovered()) {
       fill(200);
@@ -23,7 +24,7 @@ class Button {
     textSize(16);
     text(label, x + w / 2, y + h / 2);
   }
-
+//detecting if the button is hovered on or not
   boolean isHovered() {
     return mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h;
   }
